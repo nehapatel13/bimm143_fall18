@@ -1,0 +1,140 @@
+---
+title: "PCA mini project"
+author: "Neha Patel"
+date: "October 30, 2018"
+output: github_document
+---
+
+```{r}
+# import csv file as url
+url <- "https://bioboot.github.io/bimm143_S18/class-material/WisconsinCancer.csv"
+
+# import and store data as wisc.df
+wisc.df <- read.csv(url)
+
+# convert data into a matrix for columns 3->32
+wisc.data <- as.matrix(wisc.df[,3:32] )
+
+# set row names of wisc.data
+row.names(wisc.data) <- wisc.df$id
+
+# set a vector diagnosis to be equal to 1 if "M" and 0 otherwise 
+diagnosis <- as.numeric(wisc.df$diagnosis == "M")
+  # sets diagnosis == "M" so that it will return a 1 if it is malignant
+# checking if diagnosis is "M" when you put == 
+# find colnames = "_mean"
+# use grep function
+ x <- length(grep("_mean", colnames(wisc.data)))
+# finding length of the vector gives you the number of IDs with _mean
+
+
+
+```
+
+
+There are `r x` mean measurements in this dataset. 
+
+```{r}
+# check if data needs to be scaled before PCA 
+# mean of set 
+colMeans(wisc.data)
+# standard deviation
+apply(wisc.data, 2, sd)
+
+# Perform PCA on wisc.data by completing the following code 
+wisc.pr <- prcomp(wisc.data, scale=TRUE)
+summary(wisc.pr)
+
+# make a plot of PC1 vs PC2 plot 
+# for the color col=diagnosis but + 1 so 0 which is "B (benign)" won't be white and will be black  # instead based on the color palette 
+# change axis titles using x and y lab with PC1/PC2 in quotes 
+plot(wisc.pr$x[,1], wisc.pr$x[,2], col=diagnosis+1, xlab = "PC1", ylab = "PC2")
+
+# repeat for components 1 and 3 
+
+plot(wisc.pr$x[,1], wisc.pr$x[,3], col=diagnosis+1, xlab = "PC1", ylab = "PC3")
+
+# variance explained by each prinicipal component -> pve
+pr.var <- wisc.pr$sdev^2
+
+pve <- pr.var/sum(pr.var)
+
+plot(pve, xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "o")
+
+# Alternative of the same data, note data drive y-axis
+barplot(pve, ylab = "Precent of Variance Explained",
+     names.arg=paste0("PC",1:length(pve)), las=2, axes = FALSE)
+axis(2, at=pve, labels=round(pve,2)*100 )
+
+# Plot cumulative proportion of variance explained 
+plot(cumsum(pve), xlab = "Principal Component", 
+     ylab = "Cumulative Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "o")
+
+# Side by Side plots using par 
+par(mfrow=c(2,1))
+plot(pve, xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "o")
+plot(cumsum(pve), xlab = "Principal Component", 
+     ylab = "Cumulative Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "o")
+
+```
+
+## Hierarchical clustering of case data
+```{r}
+
+## Hierarichal clustering of case data
+data.scaled <- scale(wisc.data)
+
+# calculate distances between scaled data
+data.dist <- dist(data.scaled)
+
+# create a cluster model 
+wisc.hclust <- hclust(data.dist, method = "complete")
+plot(wisc.hclust)
+
+# Use cut tree to make 4 clusters 
+wisc.hclust.clusters <- cutree(wisc.hclust, k = 4)
+
+# table for just wisc.hclust.clusters
+table(wisc.hclust.clusters)
+
+# put in table so it gives you the comparison between cluster membership and original diagnosis
+table(wisc.hclust.clusters, diagnosis)
+```
+## Section 5 
+```{r}
+## Use the distance along the first 7 PCs for clustering i.e. wisc.pr$x[, 1:7]
+d.pr <- dist(wisc.pr$x[,1:7])
+# create a cluster model 
+wisc.hclust <- hclust(d.pr, method = "complete")
+plot(wisc.hclust)
+
+# Use cut tree to make 4 clusters 
+wisc.hclust.clusters <- cutree(wisc.hclust, k = 4)
+table(wisc.hclust.clusters)
+table(wisc.hclust.clusters, diagnosis)
+```
+## Predictive Modeling with PCA Components 
+```{r}
+
+## Predicting Malignancy Of New samples
+url <- "https://tinyurl.com/new-samples-CSV"
+new <- read.csv(url)
+# adding 2 new patients to the plot we already created to predict if they have cancer or not 
+npc <- predict(wisc.pr, newdata=new)
+# same plot as before 
+plot(wisc.pr$x[,1:2], col=diagnosis+1)
+# add the points to the plot above 
+points(npc[,1], npc[,2], col="blue", pch=16, cex =3)
+```
+
+
+
+
+
+
