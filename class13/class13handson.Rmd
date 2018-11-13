@@ -1,0 +1,36 @@
+---
+title: "Hands On : Class 13"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Get 
+```{r}
+library(bio3d)
+file.name <- get.pdb("1hsg")
+hiv <- read.pdb(file.name)
+read.pdb(file = file.name)
+```
+
+## Slit into seperate protein and ligand files
+
+We will use the `trim.pdb()` function to split our input structure 
+```{r}
+prot <- trim.pdb(hiv, "protein")
+prot
+write.pdb(prot, file="1hsg_protein.pdb")
+```
+```{r}
+lig <- trim.pdb(hiv, "ligand")
+write.pdb(lig, file = "1hsg_ligand.pdb")
+```
+
+
+
+
+
+
+

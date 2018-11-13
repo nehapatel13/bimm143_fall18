@@ -1,0 +1,130 @@
+---
+title: "Structural Bioinformatics Class11"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Read CSV file from Section 1 
+```{r}
+pdbstats <- read.csv("Data Export Summary.csv", row.names = 1)
+
+```
+
+Lets look at the table
+```{r}
+library(knitr)
+kable(pdbstats)
+```
+
+Q.1A Determine the percentage of structure solved by X-Ray and Electron Microscopy. 
+
+```{r}
+# total number of entries
+ntotal <- sum(pdbstats$Total)
+
+# Percentage of each method 
+pereach <- pdbstats$Total / ntotal
+
+# rounding the values
+percents <- round(pereach*100, digits = 2)
+# number of X ray structure [1] and number of EM strcuture [5] 
+percents[1]
+percents[3]
+```
+A1.A There are `r percents[1]` %X-Ray structures and `r percents[3]` %EM structures in the PDB database as of `r Sys.Date()`
+
+
+```{r}
+# Adding a percent column to the table 
+nstats <- pdbstats
+nstats$percents <- percents
+kable(nstats)
+```
+
+Q.1B What proportion of structures are proteins? 
+
+```{r}
+protot <- sum(nstats$Proteins)
+proppro <- protot/ntotal
+proppror <- round(proppro*100, digits = 2)
+```
+
+A.1B The percent of enteries that are proteins is `r proppror` %
+
+Q.2 How many HIV-1 proteases are in the PDB database
+
+A.2 There are 1130 HIV-1 proteases currently in the PDB database. 
+
+Section 3
+
+open bio3D
+```{r}
+library(bio3d)
+
+```
+
+```{r}
+pdb <-read.pdb("1hsg.pdb")
+pdb
+```
+
+Note that the attributes (+ attr:) of this object are listed on the last couple of lines. To find the attributes = attributes(pdb)
+```{r}
+attributes(pdb)
+```
+```{r}
+head(pdb$atom)
+
+# Print a subset of $atom data for the first two atoms
+pdb$atom[1:2, c("eleno", "elety", "x","y","z")]
+
+# Note that individual $atom records can also be accessed like this
+pdb$atom$elety[1:2]
+
+# Which allows us to do the following 
+plot.bio3d(pdb$atom$b[pdb$calpha], sse=pdb, typ="l", ylab="B-factor")
+
+# Print a summary of the coordinate data in $xyz
+pdb$xyz
+
+# Examine the row and column dimensions
+dim(pdb$xyz)
+
+# Print coordinates for the first two atom
+pdb$xyz[ 1, atom2xyz(1:2) ]
+
+# Select all C-alpha atoms (return their indices)
+ca.inds <- atom.select(pdb, "calpha")
+ca.inds
+```
+
+## Aligning multiple structures 
+```{r}
+# Download some example PDB files
+ids <- c("1TND_B","1AGR_A","1TAG_A","1GG2_A","1KJY_A","4G5Q_A") 
+files <- get.pdb(ids, split = TRUE)
+```
+
+```{r}
+# Extract and align the chains we are interested in
+pdbs <- pdbaln(files, fit = TRUE)
+# print pdbs
+pdbs
+```
+
+```{r}
+# find invariant core
+core <- core.find(pdbs)
+
+# superimpose all structures to core
+pdbs$xyz = pdbfit(pdbs, core)
+
+# Perform PCA
+pc.xray <- pca(pdbs)
+
+# plot the PCA
+plot(pc.xray)
+```
+
