@@ -28,6 +28,16 @@ lig <- trim.pdb(hiv, "ligand")
 write.pdb(lig, file = "1hsg_ligand.pdb")
 ```
 
+## Docking with Vina
+
+we run this command : ~/Downloads/autodock_vina_1_1_2_mac/bin/vina --config config.txt --log log.txt
+
+we got a fild all.pdbqt that we need to make into a PDB format
+```{r}
+library(bio3d)
+res <- read.pdb("all.pdbqt", multi=TRUE)
+write.pdb(res, "results.pdb")
+```
 
 
 
