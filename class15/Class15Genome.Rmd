@@ -1,0 +1,248 @@
+---
+title: "class15 : genome informatics II"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## Comment everything out so that it doesn't install every single time 
+# source("http://bioconductor.org/biocLite.R")
+# biocLite()
+
+# For this class, you'll also need DESeq2:
+# ("DESeq2)
+```
+
+## RNA-Seq
+
+First step is to read our countData and colData (metadata) files that we will use with DESeq
+
+```{r}
+counts <- read.csv("airway_scaledcounts.csv", stringsAsFactors = FALSE)
+metadata <-  read.csv("airway_metadata.csv", stringsAsFactors = FALSE)
+View(counts)
+View(metadata)
+```
+
+Lets examine the metadata file to find **control** and **treated** columns (cell-lines)
+
+```{r}
+metadata$dex == "control"
+```
+
+```{r}
+control <- metadata[metadata[,"dex"]=="control",]
+control.mean <- rowSums( counts[ ,control$id] )/4 
+names(control.mean) <- counts$ensgene
+```
+
+```{r}
+# what can you replace the divided by 4 with ? 
+control <- metadata[metadata[,"dex"]=="control",]
+control.mean <- rowSums( counts[ ,control$id] )/nrow(control)
+names(control.mean) <- counts$ensgene
+```
+
+Do the same thing for the treated columns 
+```{r}
+treated.inds <- metadata$dex == "treated"
+treated <- metadata[treated.inds, ]
+treated
+treated.mean <- rowSums(counts[, treated$id]/nrow(treated))
+names(treated.mean) <- counts$ensgene
+```
+
+we will combine our meancount data for bookeeping purposes
+```{r}
+meancounts <- data.frame(control.mean, treated.mean)
+colSums(meancounts)
+```
+
+Let's plot our data
+```{r}
+plot(meancounts$control.mean, meancounts$treated.mean)
+```
+changing the plot to make it with log transformation 
+```{r}
+plot(meancounts$control.mean, meancounts$treated.mean, log="xy")
+```
+
+Here we calculate log2foldchange, add it to our meancounts data.frame and inspect the results either with the heaed() or the View()function for example
+
+```{r}
+meancounts$log2fc <- log2(meancounts[,"treated.mean"]/meancounts[,"control.mean"])
+head(meancounts)
+```
+
+### filter genes with zero expression
+```{r}
+zero.vals <- which(meancounts[,1:2]==0, arr.ind=TRUE)
+
+to.rm <- unique(zero.vals[,1])
+head(sort(to.rm))
+mycounts <- meancounts[-to.rm,]
+head(mycounts)
+up.ind <- mycounts$log2fc > 2
+down.ind <- mycounts$log2fc < (-2)
+```
+
+
+```{r}
+anno <- read.csv("annotables_grch38.csv")
+head(anno)
+```
+
+merging mycounts row.names x with anno ensgene as y
+```{r}
+mycounts.anno <- merge(mycounts, anno, by.x="row.names", by.y="ensgene")
+View(mycounts.anno)
+```
+
+download these packages but comment out so it doesn't re download every time you load the Rmd
+```{r}
+# biocLite("AnnotationDbi")
+# biocLite("org.Hs.eg.db")
+```
+
+```{r}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+```
+
+```{r}
+columns(org.Hs.eg.db)
+```
+
+```{r}
+mycounts$symbol <- mapIds(org.Hs.eg.db,
+                     keys=row.names(mycounts),
+                     column="SYMBOL",
+                     keytype="ENSEMBL",
+                     multiVals="first")
+
+```
+
+```{r}
+head(mycounts)
+```
+
+```{r}
+mycounts$entrezid <- mapIds(org.Hs.eg.db,
+                     keys=row.names(mycounts),
+                     column="ENTREZID",
+                     keytype="ENSEMBL",
+                     multiVals="first")
+```
+
+```{r}
+mycounts$uniprot <- mapIds(org.Hs.eg.db,
+                     keys=row.names(mycounts),
+                     column="UNIPROT",
+                     keytype="ENSEMBL",
+                     multiVals="first")
+```
+
+```{r}
+head(mycounts[up.ind,])
+```
+
+```{r}
+ysource("http://bioconductor.org/biocLite.R")
+```
+```{r}
+biocLite("DESeq2")
+```
+## Figure out what this isn't working
+```{r}
+library(DESeq2)
+
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData=counts, 
+                              colData=metadata, 
+                              design=~dex, 
+                              tidy=TRUE)
+dds
+```
+```{r}
+sizeFactors(dds)
+dispersions(dds)
+dds <- DESeq(dds)
+results(dds)
+```
+
+```{r}
+res <- results(dds)
+res
+summary(res)
+```
+
+```{r}
+resOrdered <- res[order(res$pvalue),]
+res05 <- results(dds, alpha=0.05)
+summary(res05)
+```
+
+```{r}
+resSig05 <- subset(as.data.frame(res), padj < 0.05)
+nrow(resSig05)
+```
+
+```{r}
+resOrdered <- res[order(res$pvalue),]
+res01 <- results(dds, alpha=0.01)
+summary(res01)
+```
+
+```{r}
+resSig01 <- subset(as.data.frame(res), padj < 0.01)
+nrow(resSig01)
+```
+
+```{r}
+ord <- order( resSig01$padj )
+#View(res01[ord,])
+head(resSig01[ord,])
+```
+
+```{r}
+write.csv(resSig01[ord,], "signif01_results.csv")
+
+```
+
+```{r}
+i <- grep("CRISPLD2", resSig01$symbol)
+resSig01[i,]
+
+rownames(resSig01[i,])
+
+plotCounts(dds, gene="ENSG00000103196", intgroup="dex")
+
+d <- plotCounts(dds, gene="ENSG00000103196", intgroup="dex", returnData=TRUE)
+head(d)
+
+boxplot(count ~ dex , data=d)
+
+```
+
+## Volcano plots 
+Let’s make another commonly produced visualization from this data
+```{r}
+plot(res01$log2FoldChange, -log(res01$padj))
+```
+
+Make a colored version of the plot using a color vector
+```{r}
+mycols <- rep("black", nrow(res01))
+mycols[abs(res01$log2FoldChange) > 2] <- "red"
+
+inds <- (res01$padj < 0.01) & (abs(res01$log2FoldChange) > 2)
+mycols[inds] <- "blue"
+
+plot(res01$log2FoldChange, -log(res01$padj), col=mycols)
+```
+

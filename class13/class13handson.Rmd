@@ -39,6 +39,23 @@ res <- read.pdb("all.pdbqt", multi=TRUE)
 write.pdb(res, "results.pdb")
 ```
 
+```{r}
+ori <- read.pdb("1hsg_ligand.pdbqt")
+rmsd(ori, res)
+```
+
+# Using NMA 
+```{r}
+library(bio3d)
+pdb <- read.pdb("1HEL")
+modes <- nma(pdb) 
+plot(modes, sse=pdb)
+
+```
+```{r}
+mktrj(modes, mode=7, file="nma_7.pdb")
+```
+
 
 
 
