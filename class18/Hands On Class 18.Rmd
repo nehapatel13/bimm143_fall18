@@ -1,0 +1,158 @@
+---
+title: "UntitledClass 18: Cancer Genomics"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(GenomicDataCommons)
+library(maftools)
+```
+
+```{r}
+GenomicDataCommons::status()
+```
+
+```{r}
+cases_by_project <- cases() %>%
+  facet("project.project_id") %>%
+  aggregations()
+head(cases_by_project)
+```
+
+```{r}
+x <- cases_by_project$project.project_id
+
+colvec <- rep("lightblue", nrow(x))
+colvec[x$key == "TCGA-PAAD"] <- "red"
+
+
+par(mar=c(8,4,4,2))
+barplot(x$doc_count, names.arg=x$key, log="y", col=colvec, las=2)
+```
+
+```{r}
+## This code snipet is taken from the package vignette
+file_records <- files() %>%
+  filter(~ cases.project.project_id == "TCGA-PAAD" &
+    data_type == "Gene Expression Quantification" &
+    analysis.workflow_type == "HTSeq - Counts") %>%
+  response_all()
+```
+
+```{r}
+head(file_records)
+```
+
+# Variant analysis with R 
+```{r}
+maf.files = files() %>%
+    filter(~ cases.project.project_id == 'TCGA-PAAD' &
+        data_type == 'Masked Somatic Mutation' &
+        data_format == "MAF" &
+        analysis.workflow_type == "MuTect2 Variant Aggregation and Masking"
+    ) %>%
+    response_all()
+```
+
+```{r}
+# View MAF files
+attributes(maf.files)
+```
+
+```{r}
+uid <- ids(maf.files)
+maffile = gdcdata(uid)
+
+maffile
+
+```
+```{r}
+# read the pancreatic cancer file
+vars = read.maf(maf = maffile, verbose = FALSE)
+```
+
+```{r}
+plotmafSummary(maf =vars, rmOutlier = TRUE,
+               addStat = 'median', dashboard = TRUE,
+               titvRaw = FALSE)
+```
+
+```{r}
+# create an oncoplot which gives a good summary of the data
+oncoplot(maf = vars, top = 10)
+```
+
+```{r}
+# lollipopplot
+lollipopPlot(maf = vars, gene = 'KRAS', 
+                         showMutationRate = TRUE, domainLabelSize = 3)
+```
+## Section 2 of Hands on
+
+# figure out how to align the sequences using R 
+```{r}
+install.packages("bio3d")
+
+```
+```{r}
+library(bio3d)
+
+seq <- read.fasta("lecture18_sequences.fa")
+
+
+```
+
+```{r}
+seq
+```
+# first extract the vector that includes the gaps in sequence alignment
+#use identity as method so it give you "1" if it's the same 
+```{r}
+score <- conserv(seq, method = "identity")
+
+(score < 1) #returns T/F vector
+
+# use which function to determien where the trues are 
+mutant.inds <- which(score < 1)
+```
+
+```{r}
+# tumor specific sites!!! (plus gaps)
+seq$ali[, mutant.inds]
+# want the first 4 where there are no gaps because those are the tumor specific mutations
+```
+
+```{r}
+# see if we can find the gaps in the alignment and exclude them
+#f.inds are non gap containing columns
+#t.inds are gap containing colums
+gaps <- gap.inspect(seq)
+gaps$f.inds
+nongaps <- seq$ali[, gaps$f.inds]
+```
+```{r}
+# want to merg the ones that are in non-gaps but also in the mutant sites
+mutant.positions <- mutant.inds[mutant.inds %in% gaps$f.inds]
+mutant.positions
+```
+
+#want 8 before and 8 after positions to get out sequences
+```{r}
+start.position <- mutant.positions - 8
+end.position <- mutant.positions + 8
+```
+
+```{r}
+start.position
+end.position
+```
+
+```{r}
+seq$ali[,start.position[1]:end.position[1]]
+```
+
