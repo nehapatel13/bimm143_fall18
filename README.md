@@ -9,7 +9,7 @@ My class list includes:
 - [class 8](https://github.com/nehapatel13/bimm143_fall18/blob/master/class08.R/class08.md)
 - [class 9](https://github.com/nehapatel13/bimm143_fall18/blob/master/PCAclass09/PCA_project_.md)
 - [class 11](https://github.com/nehapatel13/bimm143_fall18/blob/master/class11/class11SB.md)
-- [class 13]()
+- [class 13](https://github.com/nehapatel13/bimm143_fall18/blob/master/class13/class13handson.Rmd)
 - [class 15]()
 - [class 16](https://github.com/nehapatel13/bimm143_fall18/blob/master/class16/hands_on_16.md)
 - [class 18]()
